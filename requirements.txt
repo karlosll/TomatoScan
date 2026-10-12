@@ -1,0 +1,12 @@
+# Fijar TF a la misma versión mayor/menor con la que se entrenaron
+# los .keras (el notebook usó TensorFlow 2.20).
+tensorflow==2.20.*
+
+Django>=5.0,<6.0
+djangorestframework>=3.15
+django-environ>=0.11
+psycopg[binary]>=3.1        # driver PostgreSQL moderno
+Pillow>=10.0                # ImageField y carga de imágenes
+numpy>=1.26
+gunicorn>=22.0              # servidor para producción
+reportlab>=4.0             # generación de reportes PDF (Python puro, sin libs del SO)

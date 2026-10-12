@@ -1,0 +1,7 @@
+{
+  "arquitectura": "VGG16",
+  "autor": "Hernan Sarango",
+  "f1_macro": 0.80,
+  "preprocesamiento": "vgg16",
+  "nota": "F1 macro real del reporte de clasificación del compañero (accuracy 0.78, support 488)."
+}

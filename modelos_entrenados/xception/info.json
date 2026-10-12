@@ -1,0 +1,7 @@
+{
+  "arquitectura": "Xception",
+  "autor": "Jesus Sanchez",
+  "f1_macro": 0.87,
+  "preprocesamiento": "crudo",
+  "nota": "Normaliza por dentro (x/127.5 - 1 horneado en el grafo). F1 macro real del reporte de clasificación del compañero (accuracy 0.86, support 488)."
+}

@@ -1,0 +1,7 @@
+{
+  "arquitectura": "ResNet50",
+  "autor": "Aithor Oña",
+  "f1_macro": 0.92,
+  "preprocesamiento": "resnet50",
+  "nota": "F1 macro real del reporte de clasificación del compañero (accuracy 0.92, support 488)."
+}

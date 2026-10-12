@@ -1,0 +1,266 @@
+{% extends "diagnostico/base.html" %}
+{% load traducciones l10n %}
+
+{% block titulo %}Historial de diagnósticos{% endblock %}
+
+{% block estilos %}
+<style>
+  .historial-layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 860px) { .historial-layout { grid-template-columns: 1fr; } }
+
+  /* --- Panel de filtros --- */
+  .panel-filtros { background: #fff; border: 1px solid var(--borde); border-radius: 14px;
+                   padding: 22px; position: sticky; top: 84px; }
+  .panel-filtros h2 { font-size: 19px; color: var(--verde-osc, #1b4332); margin-bottom: 16px; }
+  .filtro-grupo { padding: 14px 0; border-top: 1px solid var(--borde); }
+  .filtro-grupo:first-of-type { border-top: none; padding-top: 0; }
+  .filtro-grupo h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px;
+                     color: var(--gris); margin-bottom: 10px; }
+  .filtro-fechas { display: flex; align-items: center; gap: 6px; }
+  .filtro-fechas input { flex: 1; min-width: 0; padding: 7px 8px; border: 1px solid var(--borde);
+                         border-radius: 7px; font-size: 12.5px; }
+  .op-check { display: flex; align-items: center; justify-content: space-between; font-size: 14px;
+              padding: 5px 0; cursor: pointer; }
+  .op-check label { cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .op-check .cuenta { color: var(--gris); font-size: 13px; }
+  .escala { display: flex; justify-content: space-between; color: var(--gris); font-size: 11px; margin: 4px 0 8px; }
+  .escala-linea { height: 4px; border-radius: 3px; background: linear-gradient(90deg, #e07a3f, #ffd166, #52b788); margin-bottom: 4px; }
+  .switch { position: relative; display: inline-block; width: 42px; height: 24px; }
+  .switch input { display: none; }
+  .switch .pista { position: absolute; inset: 0; background: #ccd3ce; border-radius: 999px; transition: .2s; }
+  .switch .pista::before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+                           background: #fff; border-radius: 50%; transition: .2s; }
+  .switch input:checked + .pista { background: var(--verde); }
+  .switch input:checked + .pista::before { transform: translateX(18px); }
+  .fila-switch { display: flex; align-items: center; justify-content: space-between; }
+  .btn-limpiar { display: inline-block; margin-top: 14px; font-size: 13px; color: var(--rojo); text-decoration: none; }
+
+  /* --- Galería --- */
+  .cabecera-galeria { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .cabecera-galeria h2 { margin-bottom: 3px; }
+  .cabecera-galeria h2 { font-size: 26px; color: var(--verde-osc, #1b4332); }
+  .btn-reporte { display: inline-block; background: var(--verde); color: #fff; text-decoration: none;
+                 padding: 9px 18px; border: none; border-radius: 999px; font-size: 14px; font-weight: 600;
+                 white-space: nowrap; cursor: pointer; transition: background .2s; }
+  .btn-reporte:hover { background: #1b4332; }
+  .grid-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+  .card-diag { position: relative; background: #fff; border: 1px solid var(--borde); border-radius: 14px;
+               overflow: hidden; transition: transform .2s, box-shadow .2s; }
+  .card-diag:hover { transform: translateY(-4px); box-shadow: 0 16px 30px rgba(0,0,0,.12); }
+  .card-diag .foto { position: relative; height: 170px; }
+  .card-diag .foto img { width: 100%; height: 100%; object-fit: cover; }
+  .badge { position: absolute; left: 10px; bottom: 10px; padding: 4px 12px; border-radius: 999px;
+           font-size: 12px; font-weight: 700; color: #fff; }
+  .badge.ok { background: var(--verde); }
+  .badge.medio { background: #d99a00; }
+  .badge.bajo { background: var(--rojo); }
+  .card-cuerpo { padding: 14px 16px 16px; text-align: center; }
+  .card-cuerpo h3 { font-size: 17px; color: var(--verde-osc, #1b4332); margin-bottom: 2px; }
+  .card-cuerpo .fecha { color: var(--gris); font-size: 13px; margin-bottom: 12px; }
+  .card-acciones { display: flex; gap: 8px; justify-content: center; align-items: center; }
+  .btn-detalle { display: inline-block; border: 1px solid var(--borde); border-radius: 8px;
+                 padding: 7px 16px; font-size: 13px; color: #212529; text-decoration: none; }
+  .btn-detalle:hover { background: var(--fondo); border-color: var(--verde); }
+  .btn-borrar-mini { background: none; border: 1px solid var(--borde); color: var(--gris);
+                     border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; }
+  .btn-borrar-mini:hover { border-color: var(--rojo); color: var(--rojo); }
+
+  /* Detalle al pasar el mouse */
+  .card-detalle { position: absolute; inset: 0; background: rgba(255,255,255,.97); padding: 14px 16px;
+                  opacity: 0; pointer-events: none; transition: opacity .2s; display: flex; flex-direction: column; }
+  .card-diag:hover .card-detalle { opacity: 1; }
+  .card-detalle .cd-conf { font-size: 13px; margin-bottom: 2px; }
+  .card-detalle .cd-modelo { font-size: 13px; color: #495057; margin-bottom: 10px; }
+  .cd-barra { display: grid; grid-template-columns: 78px 1fr 40px; align-items: center; gap: 6px; font-size: 11px; margin: 3px 0; }
+  .cd-barra .cd-nom { color: #495057; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cd-fondo { background: #eef1f3; height: 8px; border-radius: 4px; overflow: hidden; }
+  .cd-relleno { height: 100%; background: var(--verde); }
+  .cd-pct { text-align: right; color: #495057; }
+
+  /* Vista cronología (lista compacta) */
+  .lista-crono { display: flex; flex-direction: column; gap: 10px; }
+  .fila-crono { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--borde);
+                border-radius: 10px; padding: 10px 14px; }
+  .fila-crono img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; }
+  .fila-crono .fc-info { flex: 1; }
+  .fila-crono .fc-clase { font-weight: 700; color: var(--verde-osc, #1b4332); }
+  .fila-crono .fc-fecha { color: var(--gris); font-size: 13px; }
+
+  /* Paginación */
+  .paginacion { display: flex; gap: 6px; justify-content: center; align-items: center; margin-top: 26px; }
+  .paginacion a, .paginacion span.pag { min-width: 36px; height: 36px; display: inline-flex;
+       align-items: center; justify-content: center; border: 1px solid var(--borde); border-radius: 8px;
+       text-decoration: none; color: #212529; font-size: 14px; }
+  .paginacion .actual { background: var(--verde); color: #fff; border-color: var(--verde); }
+  .paginacion a:hover { border-color: var(--verde); }
+</style>
+{% endblock %}
+
+{% block contenido %}
+<div class="historial-layout">
+
+  <!-- PANEL DE FILTROS -->
+  <form class="panel-filtros" method="get" id="form-filtros">
+    <h2>Filtros de historial</h2>
+
+    <div class="filtro-grupo">
+      <h3>Rango de fechas</h3>
+      <div class="filtro-fechas">
+        <input type="date" name="desde" value="{{ desde }}" onchange="this.form.submit()">
+        <span class="muted">–</span>
+        <input type="date" name="hasta" value="{{ hasta }}" onchange="this.form.submit()">
+      </div>
+    </div>
+
+    <div class="filtro-grupo">
+      <h3>Tipo de enfermedad</h3>
+      {% for f in filtros_enfermedad %}
+        <div class="op-check">
+          <label>
+            <input type="checkbox" name="enfermedad" value="{{ f.valor }}"
+                   {% if f.activo %}checked{% endif %} onchange="this.form.submit()">
+            {{ f.nombre_es }}
+          </label>
+          <span class="cuenta">({{ f.conteo }})</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="filtro-grupo">
+      <h3>Nivel de confianza</h3>
+      <div class="escala-linea"></div>
+      <div class="escala"><span>0</span><span>50%</span><span>100%</span></div>
+      <div class="op-check"><label><input type="radio" name="confianza" value=""
+            {% if not nivel_confianza %}checked{% endif %} onchange="this.form.submit()"> Todos</label></div>
+      <div class="op-check"><label><input type="radio" name="confianza" value="alto"
+            {% if nivel_confianza == "alto" %}checked{% endif %} onchange="this.form.submit()"> Alto (&gt;80%)</label></div>
+      <div class="op-check"><label><input type="radio" name="confianza" value="medio"
+            {% if nivel_confianza == "medio" %}checked{% endif %} onchange="this.form.submit()"> Medio (50–80%)</label></div>
+      <div class="op-check"><label><input type="radio" name="confianza" value="bajo"
+            {% if nivel_confianza == "bajo" %}checked{% endif %} onchange="this.form.submit()"> Bajo (&lt;50%)</label></div>
+    </div>
+
+    <div class="filtro-grupo">
+      <div class="fila-switch">
+        <span>Vista de cronología</span>
+        <label class="switch">
+          <input type="checkbox" name="vista" value="cronologia"
+                 {% if vista == "cronologia" %}checked{% endif %} onchange="this.form.submit()">
+          <span class="pista"></span>
+        </label>
+      </div>
+    </div>
+
+    <a class="btn-limpiar" href="{% url 'web-historial' %}">Limpiar filtros</a>
+  </form>
+
+  <!-- GALERÍA -->
+  <div>
+    <div class="cabecera-galeria">
+      <div>
+        <h2>Galería de diagnósticos recientes</h2>
+        <span class="muted">
+          {{ total_filtrado }} resultado{{ total_filtrado|pluralize }}
+          {% if hay_filtros %}· <span style="color:var(--verde);">filtrado: {{ desc_filtros }}</span>{% endif %}
+        </span>
+      </div>
+      {% if total_filtrado %}
+        <button type="button" class="btn-reporte abrir-pdf"
+                data-pdf="{% url 'web-historial-pdf' %}{% if querystring %}?{{ querystring }}{% endif %}"
+                data-descargar="{% url 'web-historial-pdf' %}?{% if querystring %}{{ querystring }}&{% endif %}descargar=1"
+                data-titulo="Reporte de diagnósticos{% if hay_filtros %} (filtrado){% endif %}">
+          👁 Ver reporte PDF{% if hay_filtros %} (filtrado){% endif %}</button>
+      {% endif %}
+    </div>
+
+    {% if pagina.object_list %}
+      {% if vista == "cronologia" %}
+        <!-- Vista lista cronológica -->
+        <div class="lista-crono">
+          {% for p in pagina %}
+            <div class="fila-crono">
+              <img src="{{ p.imagen.url }}" alt="{{ p.clase_visible|clase_es }}">
+              <div class="fc-info">
+                <div class="fc-clase">{{ p.clase_visible|clase_es }}
+                  <span class="badge {{ p.estado_css }}" style="position:static; margin-left:6px;">{{ p.estado }}</span>
+                </div>
+                <div class="fc-fecha">{{ p.creado_en|date:"d/m/Y H:i" }} · {{ p.confianza_visible|floatformat:2 }} confianza</div>
+              </div>
+              <a class="btn-detalle" href="{% url 'web-resultado' p.pk %}">Ver detalles</a>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <!-- Vista galería -->
+        <div class="grid-galeria">
+          {% for p in pagina %}
+            <div class="card-diag">
+              <div class="foto">
+                <img src="{{ p.imagen.url }}" alt="{{ p.clase_visible|clase_es }}">
+                <span class="badge {{ p.estado_css }}">{{ p.estado }}</span>
+              </div>
+              <div class="card-cuerpo">
+                <h3>{{ p.clase_visible|clase_es }}</h3>
+                <div class="fecha">{{ p.creado_en|date:"d/m/Y H:i" }}</div>
+                <div class="card-acciones">
+                  <a class="btn-detalle" href="{% url 'web-resultado' p.pk %}">Ver detalles</a>
+                  <form method="post" action="{% url 'web-eliminar' p.pk %}?pagina={{ pagina.number }}"
+                        onsubmit="return confirm('¿Eliminar este diagnóstico? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <button class="btn-borrar-mini" type="submit" title="Eliminar">🗑</button>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Detalle al pasar el mouse -->
+              <div class="card-detalle">
+                <div class="cd-conf">Confianza: <strong>{{ p.confianza_visible|floatformat:1 }}</strong></div>
+                <div class="cd-modelo">Modelo principal: <strong>{{ p.modelo_principal }}</strong></div>
+                {% for b in p.barras_mini %}
+                  <div class="cd-barra">
+                    <span class="cd-nom">{{ b.clase_es }}</span>
+                    <span class="cd-fondo"><span class="cd-relleno" style="width:{{ b.pct|unlocalize }}%;"></span></span>
+                    <span class="cd-pct">{{ b.pct }}%</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Paginación -->
+      {% if pagina.paginator.num_pages > 1 %}
+        <div class="paginacion">
+          {% if pagina.has_previous %}
+            <a href="?{% if querystring %}{{ querystring }}&{% endif %}pagina=1">«</a>
+            <a href="?{% if querystring %}{{ querystring }}&{% endif %}pagina={{ pagina.previous_page_number }}">‹</a>
+          {% endif %}
+          {% for n in pagina.paginator.page_range %}
+            {% if n == pagina.number %}
+              <span class="pag actual">{{ n }}</span>
+            {% else %}
+              <a href="?{% if querystring %}{{ querystring }}&{% endif %}pagina={{ n }}">{{ n }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if pagina.has_next %}
+            <a href="?{% if querystring %}{{ querystring }}&{% endif %}pagina={{ pagina.next_page_number }}">›</a>
+            <a href="?{% if querystring %}{{ querystring }}&{% endif %}pagina={{ pagina.paginator.num_pages }}">»</a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="tarjeta">
+        <p class="muted">No hay diagnósticos que coincidan con los filtros.
+           {% if total_filtrado == 0 and not querystring %}
+             <a href="{% url 'web-subir' %}">Analiza tu primera hoja.</a>
+           {% else %}
+             <a href="{% url 'web-historial' %}">Limpiar filtros.</a>
+           {% endif %}
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{
+  "arquitectura": "EfficientNet",
+  "autor": "",
+  "f1_macro": 0,
+  "preprocesamiento": "crudo",
+  "nota": "Plantilla: falta el .keras del compañero. Con f1_macro=0 el comando la omite."
+}

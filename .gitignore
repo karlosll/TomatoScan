@@ -1,0 +1,39 @@
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.ejemplo
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Modelos duplicados y artefactos temporales de entrenamiento
+modelos_entrenados/_respaldos/
+checkpoints/
+
+# IDE, sistema operativo y archivos temporales
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.swp

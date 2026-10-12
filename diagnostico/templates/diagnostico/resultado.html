@@ -1,0 +1,154 @@
+{% extends "diagnostico/base.html" %}
+{% load traducciones l10n %}
+{# Los números dentro de CSS van con |unlocalize: el locale es-ec los #}
+{# renderiza con coma decimal (width:65,8%) y el navegador los ignora. #}
+
+{% block titulo %}Resultado — {{ p.clase_visible|clase_es }}{% endblock %}
+
+{% block estilos %}
+<style>
+  .resultado-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 960px) { .resultado-cols { grid-template-columns: 1fr; } }
+  .resultado-cols .modelos-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .top-pred { font-size: 13px; color: #495057; margin: 2px 0 6px; }
+  .top-pred strong { color: var(--verde-osc, #1b4332); }
+  .resto-dist { margin-top: 8px; }
+  .resto-fila { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--gris); padding: 2px 0; }
+</style>
+{% endblock %}
+
+{% block contenido %}
+{% if not p.es_confiable %}
+<div class="aviso-advertencia">
+  <strong>⚠ Diagnóstico desconocido.</strong>
+  No se pudo identificar una hoja de tomate con seguridad. La imagen podría
+  no ser una hoja de tomate o tener baja calidad. El resultado no superó los
+  criterios de confiabilidad (confianza mínima del {{ umbral_pct }}% y acuerdo
+  entre los modelos), por lo que se reporta como <strong>Desconocido</strong>
+  y todas las métricas se muestran en cero. Intenta con una foto más clara de
+  la hoja.
+</div>
+{% endif %}
+
+<!-- 1. VEREDICTO DEL ENSEMBLE -->
+<div class="tarjeta" style="display:flex; gap:28px; flex-wrap:wrap;">
+  <img src="{{ p.imagen.url }}" alt="Imagen analizada"
+       style="width:300px; height:300px; object-fit:cover; border-radius:12px;">
+  <div style="flex:1; min-width:280px;">
+    {% if p.es_confiable %}
+      <p class="muted" style="margin:0;">Diagnóstico del ensemble</p>
+      <h2 style="margin:4px 0 2px; font-size:38px;">{{ p.clase_visible|clase_es }}</h2>
+    {% else %}
+      <p class="muted" style="margin:0;">Diagnóstico del ensemble</p>
+      <h2 style="margin:4px 0 2px; font-size:38px; color:var(--gris);">{{ p.clase_visible|clase_es }}
+        <span class="etiqueta-advertencia">(debajo del umbral)</span></h2>
+    {% endif %}
+    <p style="font-size:15px; margin:0 0 16px;">
+      Confianza: <strong>{{ confianza_pct }}%</strong>
+      · {{ p.modelos_usados|length }} modelos
+      · {{ p.tiempo_inferencia_ms }} ms
+      · {{ p.creado_en|date:"d/m/Y H:i" }}
+    </p>
+
+    {% for clase, pct in filas_ensemble %}
+      <div style="margin-bottom:8px;">
+        <span class="muted">{{ clase|clase_es }} — {{ pct }}%</span>
+        <div class="barra-fondo">
+          <div class="barra-relleno" style="width:{{ pct|unlocalize }}%;"></div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="resultado-cols">
+  <!-- 2. CÓMO ANALIZÓ CADA CNN -->
+  <div class="tarjeta">
+    <p class="kicker">Model Deep Dive</p>
+    <h3 class="titulo-seccion">Cómo analizó cada red neuronal</h3>
+    <p class="nota-seccion">
+      Cada CNN reparte un 100% entre las 5 clases. No decide sola: su opinión
+      completa entra al promedio del ensemble.
+    </p>
+
+    <div class="modelos-grid">
+      {% for m in analisis_modelos %}
+        <div class="modelo-card {% if m.coincide %}coincide{% endif %}">
+          <div class="modelo-head">
+            <h4>{{ m.arquitectura }}</h4>
+            <span class="chip">Peso {{ m.peso_pct }}%</span>
+          </div>
+          <p class="modelo-sub">
+            {% if m.autor %}{{ m.autor }} · {% endif %}F1 {{ m.f1 }}
+            {% if m.coincide %}· <span class="etiqueta-ok">coincide</span>
+            {% else %}· <span class="etiqueta-diff">discrepa</span>{% endif %}
+          </p>
+
+          <p class="top-pred">Top predicción: <strong>{{ m.clase_top|clase_es }}</strong> ({{ m.confianza_top }}%)</p>
+          <div class="mini-fondo"><span class="mini-relleno" style="width:{{ m.confianza_top|unlocalize }}%; background:var(--verde);"></span></div>
+
+          <div class="resto-dist">
+            {% for d in m.distribucion %}
+              {% if not d.es_top %}
+                <div class="resto-fila"><span>{{ d.clase|clase_es }}</span><span>{{ d.pct }}%</span></div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 3. CÓMO SE COMBINAN -->
+  <div class="tarjeta">
+    <p class="kicker">Data Visualization</p>
+    <h3 class="titulo-seccion">Cómo se combinan: promedio ponderado</h3>
+    <p class="nota-seccion">
+      El ensemble multiplica la probabilidad de cada modelo por su peso (F1 macro
+      normalizado) y promedia. El sombreado indica qué tan alta fue cada probabilidad.
+    </p>
+
+    <div class="tabla-scroll">
+      <table class="tabla-matriz">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            {% for clase in class_names %}<th>{{ clase|clase_es }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in analisis_modelos %}
+            <tr>
+              <td>{{ m.arquitectura }}</td>
+              {% for d in m.distribucion %}
+                <td class="{% if d.es_top %}celda-top{% endif %}"
+                    style="background: rgba(45,106,79,{{ d.alpha|unlocalize }});">{{ d.pct }}%</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+          <tr class="fila-ensemble">
+            <td>Ensemble</td>
+            {% for e in ensemble_ordenado %}<td>{{ e.pct }}%</td>{% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paso-formula">
+      <code>P_ensemble(clase) = Σ ( peso_modelo × P_modelo(clase) ) ÷ Σ pesos</code><br>
+      donde <code>peso_modelo = F1 macro</code> en el test set común. La clase con el
+      valor más alto (fila verde) es el diagnóstico final:
+      <strong>{{ p.clase_visible|clase_es }}</strong> con {{ confianza_pct }}%.
+    </div>
+  </div>
+</div>
+
+<div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+  <a class="btn" href="{% url 'web-subir' %}">Analizar otra hoja</a>
+  <button type="button" class="btn abrir-pdf"
+          style="background:#fff; color:var(--verde); border:1.5px solid var(--verde); cursor:pointer;"
+          data-pdf="{% url 'web-resultado-pdf' p.pk %}"
+          data-descargar="{% url 'web-resultado-pdf' p.pk %}?descargar=1"
+          data-titulo="Reporte del diagnóstico">👁 Ver PDF</button>
+</div>
+{% endblock %}

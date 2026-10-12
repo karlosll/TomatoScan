@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crear cuenta — Diagnóstico de hojas de tomate</title>
+  <style>
+    :root {
+      --verde: #2d6a4f; --verde-osc: #12341f; --verde-med: #1b4332;
+      --verde-claro: #d8f3dc; --lima: #95d5b2; --amarillo: #ffd166;
+      --tinta: #212529; --gris: #6c757d; --borde: #dee2e6; --rojo: #b02a37;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--tinta); }
+    .login-split { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; }
+
+    /* ---------- Panel de marca (izquierda) ---------- */
+    .panel-marca {
+      position: relative; overflow: hidden; color: #fff;
+      background: linear-gradient(150deg, #12341f 0%, #1b4332 45%, #2d6a4f 100%);
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 56px clamp(36px, 6vw, 88px);
+    }
+    .panel-marca .logo {
+      position: absolute; top: 30px; left: clamp(36px, 6vw, 88px);
+      display: flex; align-items: center; gap: 9px;
+      color: #fff; text-decoration: none; font-weight: 700; font-size: 18px;
+    }
+    .panel-marca .hoja {
+      position: absolute; font-size: 42px; opacity: .22; pointer-events: none; user-select: none;
+      animation: flotar 9s ease-in-out infinite;
+    }
+    .panel-marca .l1 { top: 18%; right: 14%; }
+    .panel-marca .l2 { bottom: 16%; left: 10%; animation-delay: 2.5s; }
+    .panel-marca .l3 { top: 60%; right: 22%; font-size: 30px; animation-delay: 4s; }
+    @keyframes flotar {
+      0%, 100% { transform: translateY(0) rotate(-8deg); }
+      50%      { transform: translateY(-24px) rotate(9deg); }
+    }
+    .panel-marca h1 { font-size: clamp(28px, 3.4vw, 44px); line-height: 1.14; max-width: 460px; }
+    .panel-marca h1 .resaltado { color: var(--amarillo); }
+    .panel-marca p.lema { margin-top: 16px; color: #cfe8d8; font-size: clamp(15px, 1.4vw, 17px); max-width: 430px; line-height: 1.6; }
+    .panel-marca .puntos { margin-top: 30px; display: flex; flex-direction: column; gap: 12px; }
+    .panel-marca .punto { display: flex; align-items: center; gap: 12px; font-size: 15px; color: #eafff3; }
+    .panel-marca .punto .ic {
+      width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center;
+      background: rgba(149, 213, 178, .18); box-shadow: inset 0 0 0 1px rgba(149,213,178,.35); font-size: 17px;
+    }
+
+    /* ---------- Panel de formulario (derecha) ---------- */
+    .panel-form { display: flex; align-items: center; justify-content: center; padding: 40px 24px; background: #f4f7f5; }
+    .caja-login { width: 100%; max-width: 420px; background: #fff; border: 1px solid var(--borde);
+                  border-radius: 18px; padding: 36px 34px; box-shadow: 0 18px 44px rgba(18, 52, 31, .1); }
+    .caja-login h2 { font-size: 27px; color: var(--verde-osc); }
+    .caja-login .intro { color: var(--gris); font-size: 14.5px; margin: 8px 0 22px; line-height: 1.5; }
+
+    .campo { margin-bottom: 16px; }
+    .campo label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 7px; color: #343a40; }
+    .campo .envoltura { position: relative; }
+    .campo .envoltura .ic { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: .55; }
+    .campo input {
+      width: 100%; padding: 12px 14px 12px 40px; border: 1px solid var(--borde);
+      border-radius: 10px; font-size: 15px; transition: border-color .15s, box-shadow .15s;
+    }
+    .campo input:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(45, 106, 79, .15); }
+    .campo .envoltura.clave input { padding-right: 44px; }
+    .ver-clave { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+                 background: none; border: none; cursor: pointer; font-size: 17px; opacity: .55;
+                 padding: 4px 6px; line-height: 1; }
+    .ver-clave:hover { opacity: 1; }
+    .campo.con-error input { border-color: var(--rojo); }
+    .ayuda-campo { color: var(--gris); font-size: 12px; margin-top: 5px; line-height: 1.4; }
+    .error-campo { color: var(--rojo); font-size: 12.5px; margin-top: 5px; }
+    .error-campo ul { list-style: none; }
+
+    .btn-entrar {
+      width: 100%; margin-top: 8px; background: var(--verde); color: #fff; border: none;
+      padding: 13px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: background .2s, transform .15s;
+    }
+    .btn-entrar:hover { background: var(--verde-med); transform: translateY(-1px); }
+
+    .error-login {
+      background: #f8d7da; color: var(--rojo); border: 1px solid #f5c2c7;
+      border-radius: 10px; padding: 11px 14px; font-size: 14px; margin-bottom: 20px;
+    }
+    .pie-alt { text-align: center; margin-top: 18px; font-size: 14px; color: var(--gris); }
+    .pie-alt a { color: var(--verde); font-weight: 600; text-decoration: none; }
+    .pie-alt a:hover { text-decoration: underline; }
+    .volver { display: block; text-align: center; margin-top: 10px; color: var(--gris); font-size: 13px; text-decoration: none; }
+    .volver:hover { color: var(--verde); }
+
+    @media (max-width: 820px) {
+      .login-split { grid-template-columns: 1fr; }
+      .panel-marca { padding: 74px 28px 40px; min-height: auto; }
+      .panel-marca .puntos, .panel-marca .hoja { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-split">
+
+    <!-- Panel de marca -->
+    <div class="panel-marca">
+      <a class="logo" href="{% url 'web-home' %}">🍅 TomatoScan</a>
+      <span class="hoja l1">🍃</span>
+      <span class="hoja l2">🌿</span>
+      <span class="hoja l3">🍅</span>
+
+      <h1>Únete y diagnostica <span class="resaltado">tus cultivos de tomate</span></h1>
+      <p class="lema">
+        Crea una cuenta para subir imágenes de hojas, obtener diagnósticos con
+        varias redes neuronales y llevar el historial de tus análisis.
+      </p>
+      <div class="puntos">
+        <div class="punto"><span class="ic">🔬</span> 5 enfermedades detectables</div>
+        <div class="punto"><span class="ic">🧠</span> Ensemble ponderado por F1 macro</div>
+        <div class="punto"><span class="ic">📋</span> Historial y auditoría de cada análisis</div>
+      </div>
+    </div>
+
+    <!-- Panel de formulario -->
+    <div class="panel-form">
+      <div class="caja-login">
+        <h2>Crear cuenta</h2>
+        <p class="intro">Regístrate para acceder al sistema de diagnóstico.</p>
+
+        {% if form.non_field_errors %}
+          <div class="error-login">{{ form.non_field_errors|join:" " }}</div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="campo {% if form.username.errors %}con-error{% endif %}">
+            <label for="{{ form.username.id_for_label }}">Usuario</label>
+            <div class="envoltura">
+              <span class="ic">👤</span>
+              <input type="text" name="username" id="{{ form.username.id_for_label }}"
+                     value="{{ form.username.value|default:'' }}" autofocus autocomplete="username" required>
+            </div>
+            {% if form.username.errors %}<div class="error-campo">{{ form.username.errors|join:" " }}</div>
+            {% else %}<div class="ayuda-campo">Letras, dígitos y @/./+/-/_ (hasta 150 caracteres).</div>{% endif %}
+          </div>
+
+          <div class="campo {% if form.email.errors %}con-error{% endif %}">
+            <label for="{{ form.email.id_for_label }}">Correo electrónico <span style="color:var(--gris); font-weight:400;">(opcional)</span></label>
+            <div class="envoltura">
+              <span class="ic">✉️</span>
+              <input type="email" name="email" id="{{ form.email.id_for_label }}"
+                     value="{{ form.email.value|default:'' }}" autocomplete="email">
+            </div>
+            {% if form.email.errors %}<div class="error-campo">{{ form.email.errors|join:" " }}</div>{% endif %}
+          </div>
+
+          <div class="campo {% if form.password1.errors %}con-error{% endif %}">
+            <label for="{{ form.password1.id_for_label }}">Contraseña</label>
+            <div class="envoltura clave">
+              <span class="ic">🔒</span>
+              <input type="password" name="password1" id="{{ form.password1.id_for_label }}"
+                     autocomplete="new-password" required>
+              <button type="button" class="ver-clave" aria-label="Mostrar contraseña">👁️</button>
+            </div>
+            {% if form.password1.errors %}<div class="error-campo">{{ form.password1.errors|join:" " }}</div>
+            {% else %}<div class="ayuda-campo">Mínimo 8 caracteres; evita contraseñas comunes o solo numéricas.</div>{% endif %}
+          </div>
+
+          <div class="campo {% if form.password2.errors %}con-error{% endif %}">
+            <label for="{{ form.password2.id_for_label }}">Confirmar contraseña</label>
+            <div class="envoltura clave">
+              <span class="ic">🔒</span>
+              <input type="password" name="password2" id="{{ form.password2.id_for_label }}"
+                     autocomplete="new-password" required>
+              <button type="button" class="ver-clave" aria-label="Mostrar contraseña">👁️</button>
+            </div>
+            {% if form.password2.errors %}<div class="error-campo">{{ form.password2.errors|join:" " }}</div>{% endif %}
+          </div>
+
+          <button type="submit" class="btn-entrar">Crear cuenta</button>
+        </form>
+
+        <p class="pie-alt">¿Ya tienes cuenta? <a href="{% url 'web-login' %}">Inicia sesión</a></p>
+        <a class="volver" href="{% url 'web-home' %}">← Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll(".ver-clave").forEach((boton) => {
+      boton.addEventListener("click", () => {
+        const input = boton.parentElement.querySelector("input");
+        const oculto = input.type === "password";
+        input.type = oculto ? "text" : "password";
+        boton.textContent = oculto ? "🙈" : "👁️";
+        boton.setAttribute("aria-label", oculto ? "Ocultar contraseña" : "Mostrar contraseña");
+      });
+    });
+  </script>
+</body>
+</html>

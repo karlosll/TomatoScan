@@ -1,0 +1,233 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Diagnóstico de hojas de tomate{% endblock %}</title>
+  <style>
+    :root {
+      --verde: #2d6a4f; --verde-osc: #12341f; --verde-med: #1b4332;
+      --verde-claro: #d8f3dc; --amarillo: #ffd166; --gris: #6c757d;
+      --borde: #dee2e6; --fondo: #f8f9fa; --rojo: #b02a37;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      margin: 0; background: var(--fondo); color: #212529;
+    }
+    header {
+      position: sticky; top: 0; z-index: 30;
+      background: linear-gradient(100deg, var(--verde-osc), var(--verde-med) 55%, var(--verde));
+      color: #fff; padding: 0 clamp(16px, 3vw, 32px); height: 62px;
+      display: flex; align-items: center; gap: clamp(14px, 3vw, 30px);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, .18);
+    }
+    header .marca {
+      display: flex; align-items: center; gap: 9px; color: #fff;
+      text-decoration: none; font-size: 18px; font-weight: 700; white-space: nowrap;
+    }
+    header nav { display: flex; gap: 6px; }
+    header nav a {
+      color: #cfe8d8; text-decoration: none; font-size: 14px; font-weight: 600;
+      padding: 8px 15px; border-radius: 999px; transition: background .2s, color .2s;
+    }
+    header nav a:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+    header nav a.activo { color: #fff; background: rgba(255, 255, 255, .17); }
+    main { max-width: 1240px; margin: 28px auto; padding: 0 24px; }
+    /* Encabezado pequeño en inglés sobre los títulos de sección */
+    .kicker { text-transform: uppercase; letter-spacing: 1.4px; font-size: 12px;
+              font-weight: 700; color: var(--verde); opacity: .75; margin: 0 0 2px; }
+    .tarjeta {
+      background: #fff; border: 1px solid var(--borde); border-radius: 10px;
+      padding: 24px; margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-block; background: var(--verde); color: #fff; border: none;
+      padding: 10px 22px; border-radius: 8px; font-size: 15px; cursor: pointer;
+      text-decoration: none;
+    }
+    .btn:hover { background: #1b4332; }
+    .mensaje-error {
+      background: #f8d7da; color: var(--rojo); border: 1px solid #f5c2c7;
+      border-radius: 8px; padding: 10px 16px; margin-bottom: 16px;
+    }
+    .mensaje-success {
+      background: var(--verde-claro); color: var(--verde); border: 1px solid #b7e4c7;
+      border-radius: 8px; padding: 10px 16px; margin-bottom: 16px;
+    }
+    .aviso-advertencia {
+      background: #fff3cd; color: #664d03; border: 1px solid #ffe69c;
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px;
+    }
+    .etiqueta-advertencia { color: #997404; font-weight: 600; font-size: 12px; }
+    .barra-fondo { background: #e9ecef; border-radius: 6px; height: 22px; overflow: hidden; }
+    .barra-relleno { background: var(--verde); height: 100%; color: #fff; font-size: 12px;
+                     display: flex; align-items: center; padding-left: 8px; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--borde); font-size: 14px; }
+    th { color: var(--gris); font-weight: 600; }
+    .etiqueta-ok { color: var(--verde); font-weight: 600; }
+    .etiqueta-diff { color: var(--rojo); font-weight: 600; }
+    .muted { color: var(--gris); font-size: 13px; }
+    .grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .grilla img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; }
+    .grilla a { text-decoration: none; color: inherit; }
+    .btn-eliminar {
+      background: none; border: 1px solid var(--rojo); color: var(--rojo);
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
+      margin-top: 6px;
+    }
+    .btn-eliminar:hover { background: var(--rojo); color: #fff; }
+    .zona-usuario { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+    .zona-usuario form { margin: 0; }
+    .chip-usuario {
+      display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .12);
+      padding: 5px 14px 5px 5px; border-radius: 999px; font-size: 14px; color: #fff; font-weight: 600;
+    }
+    .chip-usuario .avatar {
+      width: 27px; height: 27px; border-radius: 50%; background: var(--amarillo);
+      color: var(--verde-osc); display: grid; place-items: center; font-weight: 800; font-size: 13px;
+    }
+    .btn-salir {
+      background: transparent; border: 1.5px solid rgba(255, 255, 255, .5); color: #fff;
+      padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-salir:hover { background: rgba(255, 255, 255, .16); border-color: #fff; }
+    .tarjeta-login { max-width: 400px; margin: 48px auto 0; }
+    .tarjeta-login label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+    .tarjeta-login input[type="text"], .tarjeta-login input[type="password"] {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--borde);
+      border-radius: 8px; font-size: 15px;
+    }
+    .tarjeta-login .btn { width: 100%; margin-top: 20px; }
+
+    /* --- Detalle del análisis por CNN (pantalla de resultado) --- */
+    .titulo-seccion { margin: 0 0 2px; font-size: 17px; }
+    .nota-seccion { color: var(--gris); font-size: 13px; margin: 0 0 18px; }
+    .modelos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .modelo-card { border: 1px solid var(--borde); border-radius: 10px; padding: 16px; background: #fff; }
+    .modelo-card.coincide { border-color: #74c69d; box-shadow: 0 0 0 1px #74c69d inset; }
+    .modelo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .modelo-head h4 { margin: 0; font-size: 15px; }
+    .modelo-sub { color: var(--gris); font-size: 12px; margin: 2px 0 12px; }
+    .chip { display: inline-block; background: var(--verde-claro); color: var(--verde); font-size: 12px;
+            font-weight: 600; padding: 2px 9px; border-radius: 20px; white-space: nowrap; }
+    .chip-gris { background: #e9ecef; color: var(--gris); }
+    .dist-fila { display: grid; grid-template-columns: 132px 1fr 46px; align-items: center;
+                 gap: 8px; margin: 6px 0; font-size: 13px; }
+    .dist-clase { color: #495057; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dist-fila.top .dist-clase { font-weight: 700; color: var(--verde); }
+    .mini-fondo { background: #eef1f3; border-radius: 5px; height: 12px; overflow: hidden; }
+    .mini-relleno { background: #95d5b2; height: 100%; }
+    .dist-fila.top .mini-relleno { background: var(--verde); }
+    .dist-pct { text-align: right; font-variant-numeric: tabular-nums; color: #495057; }
+
+    /* Matriz de combinación (promedio ponderado) */
+    .tabla-scroll { overflow-x: auto; }
+    .tabla-matriz { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+    .tabla-matriz th, .tabla-matriz td { padding: 8px 10px; text-align: center;
+                                         border-bottom: 1px solid var(--borde); white-space: nowrap; }
+    .tabla-matriz th:first-child, .tabla-matriz td:first-child { text-align: left; }
+    .tabla-matriz thead th { color: var(--gris); font-weight: 600; }
+    .tabla-matriz .celda-top { font-weight: 700; }
+    .tabla-matriz .fila-ensemble td { border-top: 2px solid var(--verde);
+                                      font-weight: 700; background: var(--verde-claro); }
+    .paso-formula { background: var(--fondo); border: 1px dashed var(--borde); border-radius: 8px;
+                    padding: 12px 16px; font-size: 13px; color: #495057; margin-top: 16px; line-height: 1.6; }
+    .paso-formula code { background: #fff; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--borde); }
+
+    /* --- Modal de vista previa de PDF --- */
+    .modal-pdf { position: fixed; inset: 0; z-index: 60; background: rgba(18, 52, 31, .55);
+                 display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .modal-pdf[hidden] { display: none; }
+    .modal-pdf-caja { background: #fff; border-radius: 14px; width: min(960px, 100%); height: min(90vh, 100%);
+                      display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+    .modal-pdf-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+                     padding: 12px 16px; background: var(--verde-osc); color: #fff; }
+    .modal-pdf-cab strong { font-size: 15px; }
+    .modal-pdf-acciones { display: flex; align-items: center; gap: 10px; }
+    .btn-modal-descargar { background: var(--amarillo); color: var(--verde-osc); text-decoration: none;
+                           padding: 7px 16px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+    .btn-modal-descargar:hover { filter: brightness(.95); }
+    .btn-modal-cerrar { background: transparent; border: 1.5px solid rgba(255,255,255,.5); color: #fff;
+                        width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+    .btn-modal-cerrar:hover { background: rgba(255,255,255,.16); }
+    .modal-pdf-caja iframe { flex: 1; width: 100%; border: none; background: #525659; }
+  </style>
+  {% block estilos %}{% endblock %}
+</head>
+<body>
+  <header>
+    <a class="marca" href="{% url 'web-home' %}">🍅 TomatoScan</a>
+    {% if user.is_authenticated %}
+    {% with actual=request.resolver_match.url_name %}
+    <nav>
+      <a href="{% url 'web-home' %}" class="{% if actual == 'web-home' %}activo{% endif %}">Inicio</a>
+      <a href="{% url 'web-subir' %}" class="{% if actual == 'web-subir' %}activo{% endif %}">Nueva predicción</a>
+      <a href="{% url 'web-historial' %}" class="{% if actual == 'web-historial' %}activo{% endif %}">Historial</a>
+    </nav>
+    {% endwith %}
+    <div class="zona-usuario">
+      <span class="chip-usuario">
+        <span class="avatar">{{ user.username|first|upper }}</span>{{ user.username }}
+      </span>
+      <form method="post" action="{% url 'web-logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-salir">Cerrar sesión</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  <main>
+    {% for m in messages %}<div class="mensaje-{{ m.level_tag }}">{{ m }}</div>{% endfor %}
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <!-- Modal reutilizable de vista previa de PDF -->
+  <div class="modal-pdf" id="modalPdf" hidden>
+    <div class="modal-pdf-caja">
+      <div class="modal-pdf-cab">
+        <strong id="modalPdfTitulo">Vista previa del reporte</strong>
+        <div class="modal-pdf-acciones">
+          <a class="btn-modal-descargar" id="modalPdfDescargar" href="#">⬇ Descargar</a>
+          <button class="btn-modal-cerrar" id="modalPdfCerrar" aria-label="Cerrar" type="button">✕</button>
+        </div>
+      </div>
+      <iframe id="modalPdfFrame" title="Vista previa del PDF"></iframe>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const modal = document.getElementById("modalPdf");
+      if (!modal) return;
+      const frame = document.getElementById("modalPdfFrame");
+      const descargar = document.getElementById("modalPdfDescargar");
+      const titulo = document.getElementById("modalPdfTitulo");
+
+      function abrir(src, urlDescarga, texto) {
+        frame.src = src;
+        descargar.href = urlDescarga;
+        if (texto) titulo.textContent = texto;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+      }
+      function cerrar() {
+        modal.hidden = true;
+        frame.src = "";
+        document.body.style.overflow = "";
+      }
+      document.querySelectorAll(".abrir-pdf").forEach((b) =>
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          abrir(b.dataset.pdf, b.dataset.descargar, b.dataset.titulo);
+        }));
+      document.getElementById("modalPdfCerrar").addEventListener("click", cerrar);
+      modal.addEventListener("click", (e) => { if (e.target === modal) cerrar(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) cerrar(); });
+    })();
+  </script>
+</body>
+</html>

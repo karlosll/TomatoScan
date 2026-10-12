@@ -1,0 +1,6 @@
+{
+  "arquitectura": "MobileNetV2",
+  "autor": "Carlos Llivisupa",
+  "f1_macro": 0.8491,
+  "preprocesamiento": "crudo"
+}

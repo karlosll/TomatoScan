@@ -1,0 +1,352 @@
+{% load static l10n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico inteligente de hojas de tomate</title>
+  <style>
+    :root {
+      --verde: #2d6a4f; --verde-osc: #12341f; --verde-med: #1b4332;
+      --verde-claro: #d8f3dc; --lima: #95d5b2; --amarillo: #ffd166;
+      --naranja: #e07a3f; --rojo: #b02a37; --tinta: #212529;
+      --gris: #6c757d; --fondo: #f4f7f5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--tinta); background: var(--fondo); }
+
+    /* ---------- Barra superior ---------- */
+    .barra {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px;
+      background: rgba(18, 52, 31, .72); backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .barra .logo { color: #fff; font-weight: 700; font-size: 17px; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .btn-login {
+      background: #fff; color: var(--verde-osc); text-decoration: none;
+      padding: 9px 22px; border-radius: 999px; font-weight: 700; font-size: 14px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .2); transition: transform .2s, box-shadow .2s;
+    }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, .28); }
+    .barra .acciones-barra { display: flex; align-items: center; gap: 10px; }
+    .btn-registro {
+      background: transparent; color: #fff; text-decoration: none;
+      padding: 9px 20px; border-radius: 999px; font-weight: 700; font-size: 14px;
+      border: 1.5px solid rgba(255, 255, 255, .6); transition: background .2s, border-color .2s;
+    }
+    .btn-registro:hover { background: rgba(255, 255, 255, .16); border-color: #fff; }
+
+    /* ---------- Héroe dividido ---------- */
+    .heroe {
+      position: relative; overflow: hidden; color: #fff;
+      background: linear-gradient(120deg, #12341f 0%, #1b4332 45%, #2d6a4f 100%);
+      padding: 118px 40px 60px;
+    }
+    .heroe-inner {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 48px; align-items: center;
+    }
+    /* Panel-imagen (reemplazable por una foto real; ver comentario en el HTML) */
+    .heroe-foto {
+      position: relative; border-radius: 20px; min-height: 340px;
+      background:
+        radial-gradient(120% 90% at 30% 20%, rgba(149,213,178,.35), transparent 60%),
+        radial-gradient(120% 120% at 80% 90%, rgba(18,52,31,.6), transparent 60%),
+        linear-gradient(160deg, #2d6a4f, #143726);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 24px 50px rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .heroe-foto .planta { font-size: clamp(120px, 16vw, 180px); filter: drop-shadow(0 12px 20px rgba(0,0,0,.35)); }
+    .heroe-foto .hoja { position: absolute; font-size: 40px; opacity: .8; animation: flotar 8s ease-in-out infinite; }
+    .heroe-foto .h1 { top: 14%; left: 12%; }
+    .heroe-foto .h2 { bottom: 16%; right: 14%; animation-delay: 2.5s; }
+    .heroe-foto .h3 { top: 22%; right: 18%; font-size: 30px; animation-delay: 4s; }
+    @keyframes flotar {
+      0%, 100% { transform: translateY(0) rotate(-8deg); }
+      50%      { transform: translateY(-22px) rotate(8deg); }
+    }
+    .heroe-texto h1 {
+      font-size: clamp(34px, 5vw, 62px); line-height: 1.08; font-weight: 800;
+      animation: aparecer .8s ease both;
+    }
+    .heroe-texto h1 .resaltado { color: var(--amarillo); }
+    .heroe-texto p.sub {
+      margin-top: 20px; font-size: clamp(15px, 1.5vw, 18px); max-width: 560px;
+      color: #cfe8d8; line-height: 1.6; animation: aparecer .8s ease .2s both;
+    }
+    .heroe-texto .acciones { margin-top: 32px; display: flex; gap: 14px; flex-wrap: wrap; animation: aparecer .8s ease .4s both; }
+    .btn-cta {
+      background: var(--amarillo); color: var(--verde-osc); text-decoration: none;
+      padding: 14px 32px; border-radius: 999px; font-weight: 800; font-size: 16px;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, .25); transition: transform .2s, box-shadow .2s;
+    }
+    .btn-cta:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 12px 28px rgba(0, 0, 0, .32); }
+    .btn-fantasma {
+      border: 2px solid rgba(255, 255, 255, .55); color: #fff; text-decoration: none;
+      padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 15px; transition: background .2s;
+    }
+    .btn-fantasma:hover { background: rgba(255, 255, 255, .14); }
+    @keyframes aparecer { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+
+    /* ---------- Cifras (franja oscura con íconos) ---------- */
+    .cifras {
+      background: var(--verde-osc); color: #fff;
+      display: flex; justify-content: center; gap: clamp(18px, 5vw, 64px); flex-wrap: wrap;
+      padding: 20px 24px; border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .cifra { display: flex; align-items: center; gap: 12px; }
+    .cifra .ico { font-size: 24px; opacity: .9; }
+    .cifra .num { font-size: 20px; font-weight: 800; }
+    .cifra .desc { color: #a9c9b6; font-size: 14px; }
+
+    /* ---------- Secciones ---------- */
+    section.bloque { max-width: 1080px; margin: 0 auto; padding: 76px 24px 12px; }
+    section.bloque h2 { text-align: center; font-size: clamp(26px, 3.4vw, 36px); color: var(--verde-osc); font-weight: 800; }
+    section.bloque p.intro { text-align: center; color: var(--gris); max-width: 640px; margin: 12px auto 42px; font-size: 16px; }
+
+    .revelar { opacity: 0; transform: translateY(30px); transition: opacity .7s ease, transform .7s ease; }
+    .revelar.visible { opacity: 1; transform: none; }
+
+    /* Pasos */
+    .pasos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 22px; }
+    .paso {
+      background: #fff; border-radius: 18px; padding: 32px 26px; text-align: center;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .06); transition: transform .25s, box-shadow .25s;
+    }
+    .paso:hover { transform: translateY(-6px); box-shadow: 0 16px 34px rgba(45, 106, 79, .16); }
+    .paso .icono { font-size: 46px; }
+    .paso .numero {
+      display: inline-block; background: var(--verde-claro); color: var(--verde);
+      font-weight: 800; font-size: 12px; letter-spacing: .5px; border-radius: 999px; padding: 4px 14px; margin: 14px 0 8px;
+    }
+    .paso h3 { font-size: 18px; margin-bottom: 8px; color: var(--verde-osc); }
+    .paso p { color: var(--gris); font-size: 14px; line-height: 1.55; }
+
+    /* Enfermedades */
+    .enfermedades { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; }
+    .enfermedad {
+      background: #fff; border-radius: 16px; padding: 26px 18px; text-align: center;
+      border-top: 5px solid var(--borde-tarjeta, var(--verde));
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .06); transition: transform .25s, box-shadow .25s;
+    }
+    .enfermedad:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(0, 0, 0, .12); }
+    .enfermedad .icono { font-size: 40px; }
+    .enfermedad h3 { font-size: 16px; margin: 12px 0 8px; color: var(--verde-osc); }
+    .enfermedad p { color: var(--gris); font-size: 13px; line-height: 1.5; }
+
+    /* Ensemble */
+    .ensemble {
+      background: linear-gradient(135deg, var(--verde-osc), var(--verde));
+      border-radius: 22px; color: #fff; padding: 48px 40px; margin-top: 10px;
+      display: grid; grid-template-columns: 1fr 1.1fr; gap: 40px; align-items: center;
+    }
+    @media (max-width: 760px) { .ensemble { grid-template-columns: 1fr; } }
+    section.bloque .ensemble h2 { text-align: left; color: #fff; font-size: 28px; }
+    .ensemble p { color: var(--verde-claro); margin-top: 14px; font-size: 15px; line-height: 1.65; }
+    .votos { display: flex; flex-direction: column; gap: 16px; }
+    .voto .fila { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+    .voto .quien { font-weight: 700; }
+    .voto .pct { color: var(--amarillo); font-weight: 700; }
+    .voto .pista { background: rgba(255, 255, 255, .16); border-radius: 999px; height: 12px; overflow: hidden; }
+    .voto .relleno { height: 100%; border-radius: 999px; background: var(--amarillo); width: 0; transition: width 1.2s ease; }
+    .voto.final {
+      background: rgba(255,255,255,.1); border-radius: 12px; padding: 14px 16px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+    }
+    .voto.final .quien, .voto.final .pct { color: #fff; }
+    .voto.final .relleno { background: #fff; }
+
+    /* Cierre + pie */
+    .cierre { text-align: center; padding: 78px 20px 88px; }
+    .cierre h2 { font-size: clamp(24px, 3.4vw, 34px); color: var(--verde-osc); }
+    .cierre p { color: var(--gris); margin: 12px auto 30px; max-width: 560px; }
+    .cierre .btn-cta { background: var(--verde); color: #fff; }
+    footer { background: var(--verde-osc); color: var(--verde-claro); text-align: center; padding: 24px 16px; font-size: 13px; }
+
+    @media (max-width: 860px) {
+      .heroe-inner { grid-template-columns: 1fr; gap: 32px; }
+      .heroe-foto { min-height: 240px; order: 2; }
+      .heroe-texto { order: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra superior -->
+  <div class="barra">
+    <a class="logo" href="{% url 'web-home' %}">🍅 TomatoScan</a>
+    {% if user.is_authenticated %}
+      <a class="btn-login" href="{% url 'web-subir' %}">Ir al diagnóstico →</a>
+    {% else %}
+      <div class="acciones-barra">
+        <a class="btn-registro" href="{% url 'web-registro' %}">Registrarse</a>
+        <a class="btn-login" href="{% url 'web-login' %}">Iniciar sesión</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Héroe dividido: imagen a la izquierda, mensaje a la derecha -->
+  <section class="heroe">
+    <div class="heroe-inner">
+      <!-- Panel decorativo. Para usar una foto real: coloca la imagen en
+           diagnostico/static/diagnostico/ y reemplaza este div por una etiqueta
+           <img class="heroe-foto"> con src apuntando a ella mediante la etiqueta static. -->
+      <div class="heroe-foto">
+        <span class="hoja h1">🍃</span>
+        <span class="hoja h2">🍅</span>
+        <span class="hoja h3">🌿</span>
+        <span class="planta">🍅</span>
+      </div>
+
+      <div class="heroe-texto">
+        <h1>Detecta enfermedades del tomate <span class="resaltado">con una simple foto</span></h1>
+        <p class="sub">
+          Sube la imagen de una hoja y un conjunto de redes neuronales convolucionales
+          la analiza en segundos: identifica 5 enfermedades comunes o confirma que la
+          planta está sana, con el nivel de confianza de cada modelo.
+        </p>
+        <div class="acciones">
+          {% if user.is_authenticated %}
+            <a class="btn-cta" href="{% url 'web-subir' %}">Comenzar diagnóstico</a>
+          {% else %}
+            <a class="btn-cta" href="{% url 'web-login' %}">Comenzar diagnóstico</a>
+          {% endif %}
+          <a class="btn-fantasma" href="#como-funciona">¿Cómo funciona?</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cifras -->
+  <div class="cifras">
+    <div class="cifra"><span class="ico">🔍</span><span class="num">5</span><span class="desc">clases detectadas</span></div>
+    <div class="cifra"><span class="ico">🕸️</span><span class="num">{{ total_modelos }}</span><span class="desc">modelo{{ total_modelos|pluralize:"s" }} CNN activo{{ total_modelos|pluralize:"s" }}</span></div>
+    {% if mejor_f1_pct %}
+    <div class="cifra"><span class="ico">🎯</span><span class="num">{{ mejor_f1_pct }}%</span><span class="desc">mejor F1 macro</span></div>
+    {% endif %}
+    <div class="cifra"><span class="ico">📋</span><span class="num">{{ total_predicciones }}</span><span class="desc">diagnóstico{{ total_predicciones|pluralize:"s" }} realizado{{ total_predicciones|pluralize:"s" }}</span></div>
+  </div>
+
+  <!-- Cómo funciona -->
+  <section class="bloque" id="como-funciona">
+    <h2>¿Cómo funciona?</h2>
+    <p class="intro">Tres pasos entre la foto y el diagnóstico.</p>
+    <div class="pasos">
+      <div class="paso revelar">
+        <div class="icono">📸</div>
+        <div class="numero">PASO 1</div>
+        <h3>Sube la foto</h3>
+        <p>Fotografía la hoja de tomate y súbela desde tu computadora o teléfono. El sistema valida y prepara la imagen automáticamente.</p>
+      </div>
+      <div class="paso revelar" style="transition-delay:.15s;">
+        <div class="icono">🧠</div>
+        <div class="numero">PASO 2</div>
+        <h3>Las CNN analizan</h3>
+        <p>Varias redes neuronales convolucionales — cada una con una arquitectura distinta — evalúan la imagen de forma independiente.</p>
+      </div>
+      <div class="paso revelar" style="transition-delay:.3s;">
+        <div class="icono">✅</div>
+        <div class="numero">PASO 3</div>
+        <h3>Recibe el diagnóstico</h3>
+        <p>Un ensemble combina los votos de todos los modelos y te muestra la enfermedad detectada, la confianza y qué dijo cada red.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Enfermedades -->
+  <section class="bloque">
+    <h2>¿Qué puede detectar?</h2>
+    <p class="intro">El sistema clasifica la hoja en una de estas cinco categorías.</p>
+    <div class="enfermedades">
+      <div class="enfermedad revelar" style="--borde-tarjeta:#2d6a4f;">
+        <div class="icono">🦠</div>
+        <h3>Mancha bacteriana</h3>
+        <p>Pequeñas manchas oscuras y húmedas que se extienden por hoja y fruto.</p>
+      </div>
+      <div class="enfermedad revelar" style="--borde-tarjeta:#e07a3f; transition-delay:.1s;">
+        <div class="icono">🍂</div>
+        <h3>Tizón temprano</h3>
+        <p>Manchas marrones con anillos concéntricos que amarillean la hoja.</p>
+      </div>
+      <div class="enfermedad revelar" style="--borde-tarjeta:#2d6a4f; transition-delay:.2s;">
+        <div class="icono">💚</div>
+        <h3>Hoja sana</h3>
+        <p>Sin lesiones ni deformaciones: la planta está en buen estado.</p>
+      </div>
+      <div class="enfermedad revelar" style="--borde-tarjeta:#e07a3f; transition-delay:.3s;">
+        <div class="icono">🌧️</div>
+        <h3>Tizón tardío</h3>
+        <p>Lesiones verdosas a negras de avance rápido, típicas de clima húmedo.</p>
+      </div>
+      <div class="enfermedad revelar" style="--borde-tarjeta:#c9a227; transition-delay:.4s;">
+        <div class="icono">🌀</div>
+        <h3>Virus del rizado amarillo</h3>
+        <p>Hojas enrolladas y amarillentas; lo transmite la mosca blanca.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ensemble: varios modelos, un veredicto -->
+  <section class="bloque">
+    <div class="ensemble revelar">
+      <div>
+        <h2>Varios modelos, un veredicto</h2>
+        <p>
+          Cada integrante del equipo entrenó una arquitectura CNN distinta. Sus
+          predicciones se combinan con <strong>votación suave ponderada por F1
+          macro</strong>: los modelos más precisos pesan más en la decisión final,
+          pero ninguno se descarta. Así, el error de un modelo se corrige con el
+          acierto de los demás y el ensemble rinde al menos como su mejor integrante.
+        </p>
+      </div>
+      <div class="votos" id="votos">
+        {% for m in barras_modelos %}
+        <div class="voto">
+          <div class="fila"><span class="quien">{{ m.arquitectura }}</span><span class="pct">{{ m.pct }}%</span></div>
+          <div class="pista"><div class="relleno" data-ancho="{{ m.pct|unlocalize }}%"></div></div>
+        </div>
+        {% endfor %}
+        <div class="voto final">
+          <div class="fila"><span class="quien">Ensemble</span><span class="pct">≥ {{ mejor_f1_pct }}% F1 macro</span></div>
+          <div class="pista"><div class="relleno" data-ancho="100%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cierre -->
+  <div class="cierre revelar">
+    <h2>¿Listo para diagnosticar tu cultivo?</h2>
+    <p>Inicia sesión y obtén un diagnóstico respaldado por varias redes neuronales en segundos.</p>
+    {% if user.is_authenticated %}
+      <a class="btn-cta" href="{% url 'web-subir' %}">Ir al diagnóstico</a>
+    {% else %}
+      <a class="btn-cta" href="{% url 'web-login' %}">Iniciar sesión</a>
+    {% endif %}
+  </div>
+
+  <footer>
+    🍅 TomatoScan — Proyecto académico de Inteligencia Artificial · UNEMI
+  </footer>
+
+  <script>
+    // Revela las secciones al hacer scroll y anima las barras de votos
+    const observador = new IntersectionObserver((entradas) => {
+      entradas.forEach((entrada) => {
+        if (!entrada.isIntersecting) return;
+        entrada.target.classList.add("visible");
+        entrada.target.querySelectorAll(".relleno").forEach((barra) => {
+          barra.style.width = barra.dataset.ancho;
+        });
+        observador.unobserve(entrada.target);
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll(".revelar").forEach((el) => observador.observe(el));
+  </script>
+</body>
+</html>
